@@ -258,6 +258,12 @@ public:
     Q_INVOKABLE mu::palette::AbstractPaletteController* searchPaletteController();
     Q_INVOKABLE bool addPaletteToPanel(const QPersistentModelIndex& index, int panel);
 
+    // Dragging palettes between palette panels
+    Q_INVOKABLE void startPaletteDrag(const QModelIndex& panelModelIndex, int panel);
+    Q_INVOKABLE int draggedPaletteSourcePanel() const;
+    Q_INVOKABLE bool dropPaletteToPanel(int panel, int destRow);
+    Q_INVOKABLE bool finishPaletteDrag();
+
     Q_INVOKABLE void resetPalette(const QModelIndex&);
 
     Q_INVOKABLE bool savePalette(const QModelIndex&);
@@ -336,6 +342,11 @@ private:
     std::map<int, PanelPaletteFilterProxyModel*> m_panelModels;
     std::map<int, UserPaletteController*> m_panelControllers;
     UserPaletteController* m_searchController = nullptr;
+
+    QPersistentModelIndex m_draggedPalette;
+    int m_draggedPaletteSourcePanel = -1;
+    int m_dropTargetPanel = -1;
+    int m_dropTargetRow = -1;
 
     muse::async::Channel<engraving::ElementPtr> m_addCustomItemRequested;
 };

@@ -167,6 +167,66 @@ StyledListView {
         id: placeholder
         delegateModel: paletteTreeDelegateModel
     }
+
+    //! Dragging palettes from another palette panel into this one
+    property int foreignDragHoverCount: 0
+
+    function isForeignPaletteDrag() {
+        if (!paletteProvider) {
+            return false;
+        }
+        const sourcePanel = paletteProvider.draggedPaletteSourcePanel();
+        return sourcePanel >= 0 && sourcePanel !== panelIndex;
+    }
+
+    function foreignDragEntered() {
+        foreignDragHoverCount++;
+    }
+
+    function foreignDragExited() {
+        foreignDragHoverCount = Math.max(0, foreignDragHoverCount - 1);
+        Qt.callLater(function() {
+            if (paletteTree.foreignDragHoverCount === 0) {
+                placeholder.removePlaceholder();
+            }
+        });
+    }
+
+    function dropForeignPalette(destRow) {
+        placeholder.removePlaceholder();
+        foreignDragHoverCount = 0;
+        return paletteProvider.dropPaletteToPanel(panelIndex, destRow);
+    }
+
+    // Catches drops on the empty part of the panel (e.g. below the last palette, or an empty panel)
+    DropArea {
+        parent: paletteTree
+        anchors.fill: parent
+        z: -1
+        keys: [ "application/musescore/palettetree" ]
+
+        onEntered: {
+            if (paletteTree.isForeignPaletteDrag()) {
+                paletteTree.foreignDragEntered();
+            }
+        }
+
+        onExited: {
+            if (paletteTree.isForeignPaletteDrag()) {
+                paletteTree.foreignDragExited();
+            }
+        }
+
+        onDropped: function(drop) {
+            if (!paletteTree.isForeignPaletteDrag()) {
+                return;
+            }
+            const destRow = placeholder.active ? placeholder.index : paletteTree.count;
+            if (paletteTree.dropForeignPalette(destRow)) {
+                drop.acceptProposedAction();
+            }
+        }
+    }
     function placeholderData() {
         return { display: "", gridSize: Qt.size(1, 1), drawGrid: false, custom: false, editable: false, expanded: false };
     }
@@ -544,10 +604,14 @@ StyledListView {
                 placeholder.removePlaceholder();
                 const controller = paletteTree.paletteController;
                 const root = paletteTreeDelegateModel.rootIndex;
+                const provider = paletteTree.paletteProvider;
                 DelegateModel.inItems = true;
                 DelegateModel.inPersistedItems = false;
 
-                if (dropAction === Qt.MoveAction) {
+                // If the palette was dropped in another palette panel, this moves it there
+                const movedToOtherPanel = provider ? provider.finishPaletteDrag() : false;
+
+                if (dropAction === Qt.MoveAction && !movedToOtherPanel) {
                     controller.move(
                                 root, rowIndex,
                                 root, destIndex);
@@ -574,6 +638,7 @@ StyledListView {
                 paletteHeader.closeContextMenu()
 
                 paletteTree.itemDragged = true;
+                paletteTree.paletteProvider.startPaletteDrag(control.modelIndex, paletteTree.panelIndex);
                 DelegateModel.inPersistedItems = true;
                 DelegateModel.inItems = false;
                 placeholder.makePlaceholder(control.rowIndex, paletteTree.placeholderData());
@@ -590,13 +655,31 @@ StyledListView {
                 onEntered: {
                     const idx = control.DelegateModel.itemsIndex;
 
+                    if (paletteTree.isForeignPaletteDrag()) {
+                        paletteTree.foreignDragEntered();
+                    }
+
                     if (!control.DelegateModel.isUnresolved) {
                         placeholder.makePlaceholder(idx, paletteTree.placeholderData());
                         paletteTree.currentIndex = idx;
                     }
                 }
 
+                onExited: {
+                    if (paletteTree.isForeignPaletteDrag()) {
+                        paletteTree.foreignDragExited();
+                    }
+                }
+
                 onDropped: function(drop) {
+                    if (paletteTree.isForeignPaletteDrag()) {
+                        const destRow = placeholder.active ? placeholder.index : control.DelegateModel.itemsIndex;
+                        if (paletteTree.dropForeignPalette(destRow)) {
+                            drop.acceptProposedAction();
+                        }
+                        return;
+                    }
+
                     if (drop.proposedAction === Qt.MoveAction)
                         drop.acceptProposedAction();
                 }

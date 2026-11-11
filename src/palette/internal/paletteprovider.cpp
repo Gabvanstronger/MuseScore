@@ -886,6 +886,74 @@ AbstractPaletteController* PaletteProvider::searchPaletteController()
     return m_searchController;
 }
 
+void PaletteProvider::startPaletteDrag(const QModelIndex& panelModelIndex, int panel)
+{
+    m_draggedPalette = convertProxyIndex(panelModelIndex, m_userPaletteModel);
+    m_draggedPaletteSourcePanel = m_draggedPalette.isValid() ? panel : -1;
+    m_dropTargetPanel = -1;
+    m_dropTargetRow = -1;
+}
+
+int PaletteProvider::draggedPaletteSourcePanel() const
+{
+    return m_draggedPalette.isValid() ? m_draggedPaletteSourcePanel : -1;
+}
+
+bool PaletteProvider::dropPaletteToPanel(int panel, int destRow)
+{
+    if (!m_draggedPalette.isValid() || m_draggedPaletteSourcePanel == panel) {
+        return false;
+    }
+
+    // The move itself is done in finishPaletteDrag(), once the source panel has
+    // finished its own drag handling (so its delegates are not destroyed mid-drag)
+    m_dropTargetPanel = panel;
+    m_dropTargetRow = destRow;
+    return true;
+}
+
+bool PaletteProvider::finishPaletteDrag()
+{
+    const int panel = m_dropTargetPanel;
+    const int destRow = m_dropTargetRow;
+    const QPersistentModelIndex dragged = m_draggedPalette;
+
+    m_draggedPalette = QPersistentModelIndex();
+    m_draggedPaletteSourcePanel = -1;
+    m_dropTargetPanel = -1;
+    m_dropTargetRow = -1;
+
+    if (panel < 0 || !dragged.isValid()) {
+        return false;
+    }
+
+    QAbstractItemModel* targetModel = panelPaletteModel(panel);
+    const int targetCount = targetModel->rowCount();
+    const int srcRow = dragged.row();
+    int finalRow = srcRow;
+
+    // Palettes order only matters within a panel: place the dragged palette
+    // right before the palette at destRow in the target panel (or after its last one)
+    auto toUserRow = [this, targetModel](int row) {
+        return convertProxyIndex(targetModel->index(row, 0), m_userPaletteModel).row();
+    };
+
+    if (destRow >= 0 && destRow < targetCount) {
+        const int anchor = toUserRow(destRow);
+        finalRow = (srcRow < anchor) ? anchor - 1 : anchor;
+    } else if (targetCount > 0) {
+        const int last = toUserRow(targetCount - 1);
+        finalRow = (srcRow < last) ? last : last + 1;
+    }
+
+    if (finalRow != srcRow) {
+        m_userPaletteModel->moveRow(QModelIndex(), srcRow, QModelIndex(), finalRow);
+    }
+
+    m_userPaletteModel->setData(m_userPaletteModel->index(finalRow, 0), panel, PaletteTreeModel::PanelRole);
+    return true;
+}
+
 bool PaletteProvider::addPaletteToPanel(const QPersistentModelIndex& index, int panel)
 {
     if (!index.isValid()) {
