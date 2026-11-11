@@ -139,13 +139,47 @@ Item {
             visible: !searchHint.visible && !paletteTree.isResultFound
         }
 
-        PaletteTree {
-            id: paletteTree
-
+        Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.leftMargin: -contentColumn.sideMargin
             Layout.rightMargin: -contentColumn.sideMargin
+
+            visible: !searchHint.visible
+
+            // Catches palettes dragged from another panel and dropped on the empty part
+            // of this panel (below the last palette, or when the panel is empty)
+            DropArea {
+                anchors.fill: parent
+                keys: [ "application/musescore/palettetree" ]
+
+                onEntered: {
+                    if (paletteTree.isForeignPaletteDrag()) {
+                        paletteTree.foreignDragEntered();
+                    }
+                }
+
+                onExited: {
+                    if (paletteTree.isForeignPaletteDrag()) {
+                        paletteTree.foreignDragExited();
+                    }
+                }
+
+                onDropped: function(drop) {
+                    if (!paletteTree.isForeignPaletteDrag()) {
+                        return;
+                    }
+                    const destRow = paletteTree.placeholderActive() ? paletteTree.placeholderIndex() : paletteTree.count;
+                    if (paletteTree.dropForeignPalette(destRow)) {
+                        drop.acceptProposedAction();
+                    }
+                }
+            }
+
+        PaletteTree {
+            id: paletteTree
+
+            anchors.fill: parent
 
             clip: true
             paletteProvider: root.paletteProvider
@@ -157,8 +191,7 @@ Item {
             filter: palettesPanelHeader.searchText
             enableAnimations: !palettesPanelHeader.isSearchFieldFocused
             searchOpened: palettesPanelHeader.isSearchOpened
-
-            visible: !searchHint.visible
+        }
         }
     }
 }

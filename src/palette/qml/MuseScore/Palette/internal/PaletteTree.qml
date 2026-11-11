@@ -192,41 +192,20 @@ StyledListView {
         });
     }
 
+    function placeholderActive() {
+        return placeholder.active;
+    }
+
+    function placeholderIndex() {
+        return placeholder.index;
+    }
+
     function dropForeignPalette(destRow) {
         placeholder.removePlaceholder();
         foreignDragHoverCount = 0;
         return paletteProvider.dropPaletteToPanel(panelIndex, destRow);
     }
 
-    // Catches drops on the empty part of the panel (e.g. below the last palette, or an empty panel)
-    DropArea {
-        parent: paletteTree
-        anchors.fill: parent
-        z: -1
-        keys: [ "application/musescore/palettetree" ]
-
-        onEntered: {
-            if (paletteTree.isForeignPaletteDrag()) {
-                paletteTree.foreignDragEntered();
-            }
-        }
-
-        onExited: {
-            if (paletteTree.isForeignPaletteDrag()) {
-                paletteTree.foreignDragExited();
-            }
-        }
-
-        onDropped: function(drop) {
-            if (!paletteTree.isForeignPaletteDrag()) {
-                return;
-            }
-            const destRow = placeholder.active ? placeholder.index : paletteTree.count;
-            if (paletteTree.dropForeignPalette(destRow)) {
-                drop.acceptProposedAction();
-            }
-        }
-    }
     function placeholderData() {
         return { display: "", gridSize: Qt.size(1, 1), drawGrid: false, custom: false, editable: false, expanded: false };
     }
