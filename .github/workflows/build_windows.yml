@@ -365,7 +365,7 @@ jobs:
       run: |
         IF ${{ secrets.WIN_SIGN_S3_SECRET != 0 }} == true ( SET S_S=${{ secrets.WIN_SIGN_S3_SECRET }} ) ELSE ( SET S_S="''" )
         IF ${{ secrets.WIN_SIGN_S3_KEY != 0 }} == true ( SET S_K=${{ secrets.WIN_SIGN_S3_KEY }} ) ELSE ( SET S_K="''" )
-        buildscripts\ci\windows\package.bat --portable ON  --signsecret %S_S% --signkey %S_K%
+        buildscripts\ci\windows\package.bat --portable ON
     - name: Checksum
       run: |
         bash ./buildscripts/ci/tools/checksum.sh
