@@ -33,6 +33,9 @@ Item {
     id: root
 
     property NavigationSection navigationSection: null
+
+    //! Index of this palette panel (0 = main "Palettes" panel, 1..7 = extra palette panels)
+    property int panelIndex: 0
     property int navigationOrderStart: 1
 
     property alias contextMenuModel: contextMenuModel
@@ -61,6 +64,8 @@ Item {
     PaletteRootModel {
         id: paletteRootModel
 
+        panelIndex: root.panelIndex
+
         onPaletteSearchRequested: {
             palettesPanelHeader.startSearch()
         }
@@ -87,6 +92,7 @@ Item {
             Layout.alignment: Qt.AlignTop
 
             paletteProvider: root.paletteProvider
+            panelIndex: root.panelIndex
 
             popupMaxHeight: contentColumn.height - palettesPanelHeader.height
             popupAnchorItem: root
@@ -143,6 +149,7 @@ Item {
 
             clip: true
             paletteProvider: root.paletteProvider
+            panelIndex: root.panelIndex
 
             navigation.section: root.navigationSection
             navigation.order: palettesPanelHeader.navigation.order + 1

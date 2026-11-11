@@ -300,6 +300,8 @@ QVariant PaletteTreeModel::data(const QModelIndex& index, int role) const
             return QString("%1 palette").arg(pp->translatedName());
         case VisibleRole:
             return pp->isVisible();
+        case PanelRole:
+            return pp->panel();
         case CustomRole:
             return pp->isCustom();
         case EditableRole:
@@ -392,6 +394,16 @@ bool PaletteTreeModel::setData(const QModelIndex& index, const QVariant& value, 
                 if (val != pp->isVisible()) {
                     pp->setVisible(val);
                     emit dataChanged(index, index, { VisibleRole });
+                }
+                return true;
+            }
+            return false;
+        case PanelRole:
+            if (value.canConvert<int>()) {
+                const int val = value.toInt();
+                if (val != pp->panel()) {
+                    pp->setPanel(val);
+                    emit dataChanged(index, index, { PanelRole });
                 }
                 return true;
             }
@@ -552,6 +564,7 @@ QHash<int, QByteArray> PaletteTreeModel::roleNames() const
     roles[EditableRole] = "editable";
     roles[PaletteExpandedRole] = "expanded";
     roles[CellActiveRole] = "cellActive";
+    roles[PanelRole] = "panel";
     roles[Qt::AccessibleTextRole] = "accessibleText";
     return roles;
 }
@@ -1148,4 +1161,29 @@ bool PaletteCellFilterProxyModel::filterAcceptsRow(int sourceRow, const QModelIn
     }
 
     return false;
+}
+
+//---------------------------------------------------------
+//   PanelPaletteFilterProxyModel
+//---------------------------------------------------------
+
+PanelPaletteFilterProxyModel::PanelPaletteFilterProxyModel(int panel, QObject* parent)
+    : QSortFilterProxyModel(parent), m_panel(panel)
+{
+    setFilterRole(PaletteTreeModel::VisibleRole);
+    setFilterFixedString("true");
+}
+
+bool PanelPaletteFilterProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const
+{
+    if (!QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent)) {
+        return false;
+    }
+
+    if (sourceParent.isValid()) {
+        return true; // palette cell: visibility is enough
+    }
+
+    const QModelIndex paletteIndex = sourceModel()->index(sourceRow, 0, sourceParent);
+    return sourceModel()->data(paletteIndex, PaletteTreeModel::PanelRole).toInt() == m_panel;
 }

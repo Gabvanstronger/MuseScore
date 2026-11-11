@@ -311,6 +311,22 @@ bool UserPaletteController::insertNewItem(const QModelIndex& parent, int row, co
     const bool newItemIsPalette = !parent.isValid();
 
     if (newItemIsPalette) {
+        if (auto panelModel = qobject_cast<PanelPaletteFilterProxyModel*>(model())) {
+            // Insert directly into the user palette tree, so that the new palette
+            // gets assigned to this panel before the panel filter evaluates it.
+            int srcRow = _userPalette->rowCount();
+            if (row >= 0 && row < panelModel->rowCount()) {
+                srcRow = panelModel->mapToSource(panelModel->index(row, 0)).row();
+            }
+            if (!_userPalette->insertRow(srcRow)) {
+                return false;
+            }
+            const QModelIndex srcIndex = _userPalette->index(srcRow, 0);
+            _userPalette->setData(srcIndex, panelModel->panel(), PaletteTreeModel::PanelRole);
+            _userPalette->setData(srcIndex, name, Qt::DisplayRole);
+            return true;
+        }
+
         if (!model()->insertRow(row, parent)) {
             return false;
         }
@@ -690,7 +706,9 @@ AbstractPaletteController* PaletteProvider::mainPaletteController()
 QModelIndex PaletteProvider::customElementsPaletteIndex(const QModelIndex& index)
 {
     const QAbstractItemModel* model = customElementsPaletteModel();
-    if (index.model() == m_mainPalette && index.parent() == QModelIndex()) {
+    const bool isPanelModel = qobject_cast<const PanelPaletteFilterProxyModel*>(index.model()) != nullptr;
+    const bool isSearchModel = m_isSearching && index.model() == m_searchFilterModel;
+    if ((index.model() == m_mainPalette || isPanelModel || isSearchModel) && index.parent() == QModelIndex()) {
         const int row = convertProxyIndex(index, m_userPaletteModel).row();
         return model->index(row, 0);
     }
@@ -830,6 +848,67 @@ bool PaletteProvider::addPalette(const QPersistentModelIndex& index)
     return false;
 }
 
+QAbstractItemModel* PaletteProvider::panelPaletteModel(int panel)
+{
+    auto it = m_panelModels.find(panel);
+    if (it != m_panelModels.end()) {
+        return it->second;
+    }
+
+    PanelPaletteFilterProxyModel* model = new PanelPaletteFilterProxyModel(panel, this);
+    model->setSourceModel(m_userPaletteModel);
+    m_panelModels[panel] = model;
+    return model;
+}
+
+AbstractPaletteController* PaletteProvider::panelPaletteController(int panel)
+{
+    auto it = m_panelControllers.find(panel);
+    if (it != m_panelControllers.end()) {
+        return it->second;
+    }
+
+    UserPaletteController* controller = new UserPaletteController(panelPaletteModel(panel), m_userPaletteModel, iocContext(), this);
+    m_panelControllers[panel] = controller;
+    return controller;
+}
+
+QAbstractItemModel* PaletteProvider::searchPaletteModel()
+{
+    return m_searchFilterModel;
+}
+
+AbstractPaletteController* PaletteProvider::searchPaletteController()
+{
+    if (!m_searchController) {
+        m_searchController = new UserPaletteController(m_searchFilterModel, m_userPaletteModel, iocContext(), this);
+    }
+    return m_searchController;
+}
+
+bool PaletteProvider::addPaletteToPanel(const QPersistentModelIndex& index, int panel)
+{
+    if (!index.isValid()) {
+        return false;
+    }
+
+    if (index.model() == m_userPaletteModel) {
+        m_userPaletteModel->setData(index, panel, PaletteTreeModel::PanelRole);
+        return addPalette(index);
+    }
+
+    if (index.model() == m_masterPaletteModel) {
+        if (!addPalette(index)) {
+            return false;
+        }
+        // addPalette() inserts palettes from the master palette at the top of the user palette tree
+        m_userPaletteModel->setData(m_userPaletteModel->index(0, 0), panel, PaletteTreeModel::PanelRole);
+        return true;
+    }
+
+    return false;
+}
+
 void PaletteProvider::resetPalette(const QModelIndex& index)
 {
     if (!index.isValid()) {
@@ -874,6 +953,7 @@ void PaletteProvider::doResetPalette(const QModelIndex& index)
     // restore visibility and expanded state of the palette after restoring its state
     const bool wasVisible = index.data(PaletteTreeModel::VisibleRole).toBool();
     const bool wasExpanded = index.data(PaletteTreeModel::PaletteExpandedRole).toBool();
+    const int panel = index.data(PaletteTreeModel::PanelRole).toInt();
 
     if (!m_userPaletteModel->removeRow(row, parent)) {
         return;
@@ -890,6 +970,7 @@ void PaletteProvider::doResetPalette(const QModelIndex& index)
     const QModelIndex newIndex = m_userPaletteModel->index(row, column, parent);
     m_userPaletteModel->setData(newIndex, wasVisible, PaletteTreeModel::VisibleRole);
     m_userPaletteModel->setData(newIndex, wasExpanded, PaletteTreeModel::PaletteExpandedRole);
+    m_userPaletteModel->setData(newIndex, panel, PaletteTreeModel::PanelRole);
 }
 
 QString PaletteProvider::getPaletteFilename(bool open, const QString& name) const

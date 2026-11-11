@@ -35,6 +35,13 @@ inline const muse::Uri NOTATION_URI("musescore://notation");
 
 // Panels:
 static const DockName PALETTES_PANEL_NAME("palettesPanel");
+static const DockName PALETTES_PANEL_2_NAME("palettesPanel2");
+static const DockName PALETTES_PANEL_3_NAME("palettesPanel3");
+static const DockName PALETTES_PANEL_4_NAME("palettesPanel4");
+static const DockName PALETTES_PANEL_5_NAME("palettesPanel5");
+static const DockName PALETTES_PANEL_6_NAME("palettesPanel6");
+static const DockName PALETTES_PANEL_7_NAME("palettesPanel7");
+static const DockName PALETTES_PANEL_8_NAME("palettesPanel8");
 static const DockName LAYOUT_PANEL_NAME("instrumentsPanel"); // old name for backwards compatibility
 static const DockName INSPECTOR_PANEL_NAME("inspectorPanel");
 static const DockName SELECTION_FILTERS_PANEL_NAME("selectionFiltersPanel");

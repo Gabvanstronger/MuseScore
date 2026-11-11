@@ -298,6 +298,15 @@ MenuItem* AppMenuModel::makeViewMenu()
         makeMenuItem("fullscreen"),
 #endif
         makeMenuItem("toggle-palettes"),
+        makeMenu(TranslatableString::untranslatable("More palette panels"), {
+            makeMenuItem("toggle-palettes-2"),
+            makeMenuItem("toggle-palettes-3"),
+            makeMenuItem("toggle-palettes-4"),
+            makeMenuItem("toggle-palettes-5"),
+            makeMenuItem("toggle-palettes-6"),
+            makeMenuItem("toggle-palettes-7"),
+            makeMenuItem("toggle-palettes-8"),
+        }, "menu-palette-panels"),
         makeMenuItem("masterpalette"),
         makeMenuItem("toggle-instruments"),
         makeMenuItem("inspector"),

@@ -312,6 +312,8 @@ bool Palette::read(XmlReader& e, bool pasteMode)
             }
         } else if (tag == "visible") {
             m_isVisible = e.readBool();
+        } else if (tag == "panel") {
+            m_panel = e.readInt();
         } else if (pasteMode && tag == "expanded") {
             m_isExpanded = e.readBool();
         } else if (tag == "editable") {
@@ -371,6 +373,7 @@ void Palette::write(XmlWriter& xml, bool pasteMode) const
     }
 
     xml.tag("visible", m_isVisible, true);
+    xml.tag("panel", m_panel, 0);
     xml.tag("editable", m_isEditable, true);
 
     if (pasteMode) {

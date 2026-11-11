@@ -24,6 +24,8 @@
 
 #include <QAbstractItemModel>
 
+#include <map>
+
 #include "async/asyncable.h"
 
 #include "modularity/ioc.h"
@@ -249,6 +251,13 @@ public:
     Q_INVOKABLE QAbstractItemModel* availableExtraPalettesModel() const;
     Q_INVOKABLE bool addPalette(const QPersistentModelIndex&);
 
+    // Multiple palette panels: each panel shows the visible palettes assigned to it
+    Q_INVOKABLE QAbstractItemModel* panelPaletteModel(int panel);
+    Q_INVOKABLE mu::palette::AbstractPaletteController* panelPaletteController(int panel);
+    Q_INVOKABLE QAbstractItemModel* searchPaletteModel();
+    Q_INVOKABLE mu::palette::AbstractPaletteController* searchPaletteController();
+    Q_INVOKABLE bool addPaletteToPanel(const QPersistentModelIndex& index, int panel);
+
     Q_INVOKABLE void resetPalette(const QModelIndex&);
 
     Q_INVOKABLE bool savePalette(const QModelIndex&);
@@ -323,6 +332,10 @@ private:
     UserPaletteController* m_mainPaletteController = nullptr;
     // PaletteController* m_masterPaletteController = nullptr;
     UserPaletteController* m_customElementsPaletteController = nullptr;
+
+    std::map<int, PanelPaletteFilterProxyModel*> m_panelModels;
+    std::map<int, UserPaletteController*> m_panelControllers;
+    UserPaletteController* m_searchController = nullptr;
 
     muse::async::Channel<engraving::ElementPtr> m_addCustomItemRequested;
 };

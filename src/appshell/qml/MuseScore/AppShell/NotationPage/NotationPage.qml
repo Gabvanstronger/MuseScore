@@ -277,6 +277,244 @@ DockPage {
         },
 
         DockPanel {
+            id: palettesPanel2
+
+            objectName: "palettesPanel2"
+            title: "Palettes 2"
+
+            navigationSection: root.navigationPanelSec(palettesPanel2.location)
+
+            width: root.verticalPanelDefaultWidth
+            minimumWidth: root.verticalPanelDefaultWidth
+            maximumWidth: root.verticalPanelDefaultWidth
+
+            minimumHeight: root.panelMinDimension
+            maximumHeight: root.panelMaxDimension
+
+            groupName: root.verticalPanelsGroup
+
+            dropDestinations: root.verticalPanelDropDestinations
+
+            //! NOTE: hidden by default, open from View > More palette panels
+            visible: false
+
+            PalettesPanel {
+                panelIndex: 1
+
+                navigationSection: palettesPanel2.navigationSection
+                navigationOrderStart: palettesPanel2.contentNavigationPanelOrderStart
+
+                Component.onCompleted: {
+                    palettesPanel2.contextMenuModel = contextMenuModel
+                }
+            }
+        },
+
+        DockPanel {
+            id: palettesPanel3
+
+            objectName: "palettesPanel3"
+            title: "Palettes 3"
+
+            navigationSection: root.navigationPanelSec(palettesPanel3.location)
+
+            width: root.verticalPanelDefaultWidth
+            minimumWidth: root.verticalPanelDefaultWidth
+            maximumWidth: root.verticalPanelDefaultWidth
+
+            minimumHeight: root.panelMinDimension
+            maximumHeight: root.panelMaxDimension
+
+            groupName: root.verticalPanelsGroup
+
+            dropDestinations: root.verticalPanelDropDestinations
+
+            //! NOTE: hidden by default, open from View > More palette panels
+            visible: false
+
+            PalettesPanel {
+                panelIndex: 2
+
+                navigationSection: palettesPanel3.navigationSection
+                navigationOrderStart: palettesPanel3.contentNavigationPanelOrderStart
+
+                Component.onCompleted: {
+                    palettesPanel3.contextMenuModel = contextMenuModel
+                }
+            }
+        },
+
+        DockPanel {
+            id: palettesPanel4
+
+            objectName: "palettesPanel4"
+            title: "Palettes 4"
+
+            navigationSection: root.navigationPanelSec(palettesPanel4.location)
+
+            width: root.verticalPanelDefaultWidth
+            minimumWidth: root.verticalPanelDefaultWidth
+            maximumWidth: root.verticalPanelDefaultWidth
+
+            minimumHeight: root.panelMinDimension
+            maximumHeight: root.panelMaxDimension
+
+            groupName: root.verticalPanelsGroup
+
+            dropDestinations: root.verticalPanelDropDestinations
+
+            //! NOTE: hidden by default, open from View > More palette panels
+            visible: false
+
+            PalettesPanel {
+                panelIndex: 3
+
+                navigationSection: palettesPanel4.navigationSection
+                navigationOrderStart: palettesPanel4.contentNavigationPanelOrderStart
+
+                Component.onCompleted: {
+                    palettesPanel4.contextMenuModel = contextMenuModel
+                }
+            }
+        },
+
+        DockPanel {
+            id: palettesPanel5
+
+            objectName: "palettesPanel5"
+            title: "Palettes 5"
+
+            navigationSection: root.navigationPanelSec(palettesPanel5.location)
+
+            width: root.verticalPanelDefaultWidth
+            minimumWidth: root.verticalPanelDefaultWidth
+            maximumWidth: root.verticalPanelDefaultWidth
+
+            minimumHeight: root.panelMinDimension
+            maximumHeight: root.panelMaxDimension
+
+            groupName: root.verticalPanelsGroup
+
+            dropDestinations: root.verticalPanelDropDestinations
+
+            //! NOTE: hidden by default, open from View > More palette panels
+            visible: false
+
+            PalettesPanel {
+                panelIndex: 4
+
+                navigationSection: palettesPanel5.navigationSection
+                navigationOrderStart: palettesPanel5.contentNavigationPanelOrderStart
+
+                Component.onCompleted: {
+                    palettesPanel5.contextMenuModel = contextMenuModel
+                }
+            }
+        },
+
+        DockPanel {
+            id: palettesPanel6
+
+            objectName: "palettesPanel6"
+            title: "Palettes 6"
+
+            navigationSection: root.navigationPanelSec(palettesPanel6.location)
+
+            width: root.verticalPanelDefaultWidth
+            minimumWidth: root.verticalPanelDefaultWidth
+            maximumWidth: root.verticalPanelDefaultWidth
+
+            minimumHeight: root.panelMinDimension
+            maximumHeight: root.panelMaxDimension
+
+            groupName: root.verticalPanelsGroup
+
+            dropDestinations: root.verticalPanelDropDestinations
+
+            //! NOTE: hidden by default, open from View > More palette panels
+            visible: false
+
+            PalettesPanel {
+                panelIndex: 5
+
+                navigationSection: palettesPanel6.navigationSection
+                navigationOrderStart: palettesPanel6.contentNavigationPanelOrderStart
+
+                Component.onCompleted: {
+                    palettesPanel6.contextMenuModel = contextMenuModel
+                }
+            }
+        },
+
+        DockPanel {
+            id: palettesPanel7
+
+            objectName: "palettesPanel7"
+            title: "Palettes 7"
+
+            navigationSection: root.navigationPanelSec(palettesPanel7.location)
+
+            width: root.verticalPanelDefaultWidth
+            minimumWidth: root.verticalPanelDefaultWidth
+            maximumWidth: root.verticalPanelDefaultWidth
+
+            minimumHeight: root.panelMinDimension
+            maximumHeight: root.panelMaxDimension
+
+            groupName: root.verticalPanelsGroup
+
+            dropDestinations: root.verticalPanelDropDestinations
+
+            //! NOTE: hidden by default, open from View > More palette panels
+            visible: false
+
+            PalettesPanel {
+                panelIndex: 6
+
+                navigationSection: palettesPanel7.navigationSection
+                navigationOrderStart: palettesPanel7.contentNavigationPanelOrderStart
+
+                Component.onCompleted: {
+                    palettesPanel7.contextMenuModel = contextMenuModel
+                }
+            }
+        },
+
+        DockPanel {
+            id: palettesPanel8
+
+            objectName: "palettesPanel8"
+            title: "Palettes 8"
+
+            navigationSection: root.navigationPanelSec(palettesPanel8.location)
+
+            width: root.verticalPanelDefaultWidth
+            minimumWidth: root.verticalPanelDefaultWidth
+            maximumWidth: root.verticalPanelDefaultWidth
+
+            minimumHeight: root.panelMinDimension
+            maximumHeight: root.panelMaxDimension
+
+            groupName: root.verticalPanelsGroup
+
+            dropDestinations: root.verticalPanelDropDestinations
+
+            //! NOTE: hidden by default, open from View > More palette panels
+            visible: false
+
+            PalettesPanel {
+                panelIndex: 7
+
+                navigationSection: palettesPanel8.navigationSection
+                navigationOrderStart: palettesPanel8.contentNavigationPanelOrderStart
+
+                Component.onCompleted: {
+                    palettesPanel8.contextMenuModel = contextMenuModel
+                }
+            }
+        },
+
+        DockPanel {
             id: layoutPanel
 
             objectName: root.pageModel.layoutPanelName()

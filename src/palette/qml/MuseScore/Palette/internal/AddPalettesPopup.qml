@@ -33,6 +33,7 @@ StyledPopupView {
     id: root
 
     property PaletteProvider paletteProvider: null
+    property int panelIndex: 0
     property alias model: palettesList.model
     property int maxHeight: 400
 
@@ -153,7 +154,7 @@ StyledPopupView {
                         accessible.name: toolTipTitle
 
                         onClicked: {
-                            if (root.paletteProvider.addPalette(morePalettesDelegate.model.paletteIndex)) {
+                            if (root.paletteProvider.addPaletteToPanel(morePalettesDelegate.model.paletteIndex, root.panelIndex)) {
                                 morePalettesDelegate.added = true
                             }
                         }

@@ -34,8 +34,13 @@ StyledListView {
     id: paletteTree
 
     property PaletteProvider paletteProvider
-    property AbstractItemModel paletteModel: Boolean(paletteProvider) ? paletteProvider.mainPaletteModel : null
-    property PaletteController paletteController: paletteProvider ? paletteProvider.mainPaletteController : null
+    property int panelIndex: 0 // which palette panel this tree belongs to
+    property AbstractItemModel paletteModel: Boolean(paletteProvider)
+                                             ? (searchOpened ? paletteProvider.searchPaletteModel() : paletteProvider.panelPaletteModel(panelIndex))
+                                             : null
+    property PaletteController paletteController: Boolean(paletteProvider)
+                                                  ? (searchOpened ? paletteProvider.searchPaletteController() : paletteProvider.panelPaletteController(panelIndex))
+                                                  : null
 
     property alias navigation: keynavTree
 

@@ -116,7 +116,8 @@ public:
         PaletteExpandedRole,
         PaletteTypeRole,
         PaletteContentTypeRole,
-        CellActiveRole
+        CellActiveRole,
+        PanelRole
     };
     Q_ENUM(PaletteTreeModelRoles)
 
@@ -237,6 +238,25 @@ public:
     PaletteCellFilterProxyModel(QObject* parent = nullptr);
 
     bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
+};
+
+//---------------------------------------------------------
+//   PanelPaletteFilterProxyModel
+///   Shows visible palettes (and their visible cells) that belong to one palette panel
+//---------------------------------------------------------
+
+class PanelPaletteFilterProxyModel : public QSortFilterProxyModel
+{
+    Q_OBJECT
+public:
+    PanelPaletteFilterProxyModel(int panel, QObject* parent = nullptr);
+
+    int panel() const { return m_panel; }
+
+    bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
+
+private:
+    int m_panel = 0;
 };
 }
 

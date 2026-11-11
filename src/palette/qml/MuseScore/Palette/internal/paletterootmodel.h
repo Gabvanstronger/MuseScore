@@ -84,6 +84,7 @@ class PaletteRootModel : public QObject, public QQmlParserStatus, public muse::a
     Q_INTERFACES(QQmlParserStatus)
 
     Q_PROPERTY(mu::palette::PaletteProvider * paletteProvider READ paletteProvider_property CONSTANT)
+    Q_PROPERTY(int panelIndex READ panelIndex WRITE setPanelIndex NOTIFY panelIndexChanged)
 
     muse::ContextInject<IPaletteProvider> paletteProvider = { this };
     muse::ContextInject<muse::actions::IActionsDispatcher> dispatcher = { this };
@@ -96,13 +97,22 @@ public:
 
     PaletteProvider* paletteProvider_property() const;
 
+    int panelIndex() const { return m_panelIndex; }
+    void setPanelIndex(int index);
+
+    //! Only the main palette panel reacts to palette shortcuts (search, apply current element)
+    bool canReceiveAction(const muse::actions::ActionCode& code) const override;
+
 signals:
     void paletteSearchRequested();
     void applyCurrentPaletteElementRequested();
+    void panelIndexChanged();
 
 private:
     void classBegin() override;
     void componentComplete() override {}
     void init();
+
+    int m_panelIndex = 0;
 };
 }

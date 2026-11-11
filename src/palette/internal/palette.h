@@ -160,6 +160,10 @@ public:
     bool isVisible() const { return m_isVisible; }
     void setVisible(bool val) { m_isVisible = val; }
 
+    //! Index of the palette panel (0 = main "Palettes" panel) this palette is shown in
+    int panel() const { return m_panel; }
+    void setPanel(int val) { m_panel = val; }
+
     bool isCustom() const { return m_type == Type::Custom; }
 
     bool isEditable() const { return m_isEditable; }
@@ -198,6 +202,7 @@ private:
 
     bool m_isVisible = true;
     bool m_isEditable = true;
+    int m_panel = 0;
     bool m_isExpanded = false;
 };
 }

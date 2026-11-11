@@ -30,6 +30,7 @@ Item {
     id: root
 
     property PaletteProvider paletteProvider: null
+    property int panelIndex: 0
 
     property bool isSearchOpened: false
     readonly property bool isSearchFieldFocused: searchField.activeFocus
@@ -129,6 +130,7 @@ Item {
         AddPalettesPopup {
             id: addPalettesPopup
             paletteProvider: root.paletteProvider
+            panelIndex: root.panelIndex
 
             popupAvailableWidth: root.width
             anchorItem: root.popupAnchorItem

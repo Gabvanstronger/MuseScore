@@ -51,6 +51,20 @@ void PaletteRootModel::init()
     });
 }
 
+void PaletteRootModel::setPanelIndex(int index)
+{
+    if (m_panelIndex == index) {
+        return;
+    }
+    m_panelIndex = index;
+    emit panelIndexChanged();
+}
+
+bool PaletteRootModel::canReceiveAction(const muse::actions::ActionCode&) const
+{
+    return m_panelIndex == 0;
+}
+
 PaletteProvider* PaletteRootModel::paletteProvider_property() const
 {
     return dynamic_cast<PaletteProvider*>(paletteProvider().get());
