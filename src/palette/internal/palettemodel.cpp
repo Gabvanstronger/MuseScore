@@ -21,6 +21,7 @@
  */
 
 #include "palettemodel.h"
+#include "log.h"
 
 #include <QMimeData>
 
@@ -1358,13 +1359,16 @@ void PanelPaletteFilterProxyModel::setSourceModel(QAbstractItemModel* model)
         disconnect(sourceModel(), &QAbstractItemModel::dataChanged, this, &PanelPaletteFilterProxyModel::onSourceDataChanged);
     }
 
+    LOGI() << "[palette-panels] proxy setSourceModel: panel " << m_panel << ", column " << m_column;
     QSortFilterProxyModel::setSourceModel(model);
 
     if (model) {
         connect(model, &QAbstractItemModel::dataChanged, this, &PanelPaletteFilterProxyModel::onSourceDataChanged);
     }
 
+    LOGI() << "[palette-panels] proxy sort";
     sort(0);
+    LOGI() << "[palette-panels] proxy sorted"; 
 }
 
 PaletteTreeModel* PanelPaletteFilterProxyModel::treeModel() const

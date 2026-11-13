@@ -410,7 +410,9 @@ void DockWindow::loadPanels(const DockPageView* page)
     TRACEFUNC;
 
     for (DockPanelView* panel : page->panels()) {
+        LOGI() << "[palette-panels] load panel: " << panel->objectName();
         if (DockPanelView* destinationPanel = page->findPanelForTab(panel)) {
+            LOGI() << "[palette-panels]   as tab of: " << destinationPanel->objectName();
             addPanelAsTab(panel, destinationPanel);
             continue;
         }
@@ -428,6 +430,7 @@ void DockWindow::loadPanels(const DockPageView* page)
             addDock(holder, location);
         }
     }
+    LOGI() << "[palette-panels] panels loaded";
 }
 
 void DockWindow::alignTopLevelToolBars(const DockPageView* page)

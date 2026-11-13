@@ -59,8 +59,10 @@ Item {
     }
 
     Component.onCompleted: {
+        console.warn("[palette-panels] HorizontalPalettesPanel completed, panel " + root.panelIndex)
         contextMenuModel.load()
         refreshColumns()
+        console.warn("[palette-panels] HorizontalPalettesPanel columns: " + root.columnCount)
     }
 
     onPaletteProviderChanged: refreshColumns()

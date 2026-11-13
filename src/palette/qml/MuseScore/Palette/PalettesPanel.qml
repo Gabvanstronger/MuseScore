@@ -58,6 +58,7 @@ Item {
     }
 
     Component.onCompleted: {
+        console.warn("[palette-panels] PalettesPanel completed, panel " + root.panelIndex)
         contextMenuModel.load()
     }
 

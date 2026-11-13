@@ -21,6 +21,7 @@
  */
 
 #include "paletteprovider.h"
+#include "log.h"
 
 #include <QFileDialog>
 #include <QStandardItemModel>
@@ -895,9 +896,12 @@ QAbstractItemModel* PaletteProvider::panelPaletteModel(int panel, int column)
         return it->second;
     }
 
+    LOGI() << "[palette-panels] create panel model: panel " << panel << ", column " << column
+           << ", user palettes: " << (m_userPaletteModel ? m_userPaletteModel->rowCount() : -1);
     PanelPaletteFilterProxyModel* model = new PanelPaletteFilterProxyModel(panel, column, this);
     model->setSourceModel(m_userPaletteModel);
     m_panelModels[key] = model;
+    LOGI() << "[palette-panels] panel model created: rows " << model->rowCount();
     return model;
 }
 
@@ -1090,6 +1094,7 @@ bool PaletteProvider::addPaletteToPanel(const QPersistentModelIndex& index, int 
 
 QVariantList PaletteProvider::duplicateTargetPanels(const QModelIndex& panelModelIndex) const
 {
+    LOGD() << "[palette-panels] duplicateTargetPanels";
     QVariantList panels;
     const QModelIndex index = convertProxyIndex(panelModelIndex, m_userPaletteModel);
     if (!index.isValid() || index.parent().isValid()) {
