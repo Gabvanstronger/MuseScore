@@ -23,6 +23,7 @@
 #define MU_PALETTE_PALETTE_H
 
 #include <functional>
+#include <map>
 
 #include "palettecell.h"
 
@@ -160,9 +161,19 @@ public:
     bool isVisible() const { return m_isVisible; }
     void setVisible(bool val) { m_isVisible = val; }
 
-    //! Index of the palette panel (0 = main "Palettes" panel) this palette is shown in
-    int panel() const { return m_panel; }
-    void setPanel(int val) { m_panel = val; }
+    //! State of this palette in one palette panel (0 = main "Palettes" panel).
+    //! A palette can be shown (linked) in several panels; each panel keeps
+    //! its own order and expanded state.
+    struct PanelState {
+        int order = -1;
+        bool expanded = false;
+    };
+    using PanelStates = std::map<int, PanelState>;
+
+    //! Until panels are assigned explicitly, a visible palette is shown in the main panel only
+    PanelStates panelStates() const;
+    void setPanelStates(const PanelStates& states);
+    bool isInPanel(int panel) const;
 
     bool isCustom() const { return m_type == Type::Custom; }
 
@@ -202,7 +213,8 @@ private:
 
     bool m_isVisible = true;
     bool m_isEditable = true;
-    int m_panel = 0;
+    PanelStates m_panelStates;
+    bool m_panelStatesAssigned = false;
     bool m_isExpanded = false;
 };
 }

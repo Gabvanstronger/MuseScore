@@ -117,7 +117,8 @@ public:
         PaletteTypeRole,
         PaletteContentTypeRole,
         CellActiveRole,
-        PanelRole
+        PanelsRole,         // persistent: palette panels membership/order changed
+        PanelExpandedRole   // non-persistent: expanded state of a palette in a panel changed
     };
     Q_ENUM(PaletteTreeModelRoles)
 
@@ -187,6 +188,18 @@ public:
     bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
     bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
 
+    // Palette panels (a palette can be shown in several panels)
+    Palette::PanelStates palettePanelStates(const QModelIndex& paletteIndex) const;
+    void setPalettePanelStates(const QModelIndex& paletteIndex, const Palette::PanelStates& states);
+    bool isPaletteInPanel(const QModelIndex& paletteIndex, int panel) const;
+    int palettePanelOrder(const QModelIndex& paletteIndex, int panel) const;
+    bool palettePanelExpanded(const QModelIndex& paletteIndex, int panel) const;
+    void addPaletteToPanel(const QModelIndex& paletteIndex, int panel, bool expanded);
+    void removePaletteFromPanel(const QModelIndex& paletteIndex, int panel);
+    void setPalettePanelExpanded(const QModelIndex& paletteIndex, int panel, bool expanded);
+    //! Sets the order of palettes in a panel to the given order of (top-level) rows
+    void setPanelOrder(int panel, const std::vector<int>& rows);
+
     const Palette* findPalette(const QModelIndex&) const;
     Palette* findPalette(const QModelIndex& index);
     PaletteCellConstPtr findCell(const QModelIndex&) const;
@@ -253,9 +266,28 @@ public:
 
     int panel() const { return m_panel; }
 
+    void setSourceModel(QAbstractItemModel* sourceModel) override;
+
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+    bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) override;
+
+    //! Source (palette tree) rows of this panel's palettes, in panel order
+    std::vector<int> sourceRowsInOrder() const;
+
+    //! Moves a palette within this panel; destRow is its final position in the panel
+    bool movePalette(int srcRow, int destRow);
+
+    //! Adds a palette (source row) to this panel at the given position (-1 = at the end)
+    void insertPalette(int sourcePaletteRow, int destRow, bool expanded);
+
+protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
+    bool lessThan(const QModelIndex& left, const QModelIndex& right) const override;
 
 private:
+    PaletteTreeModel* treeModel() const;
+    void onSourceDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QList<int>& roles);
+
     int m_panel = 0;
 };
 }

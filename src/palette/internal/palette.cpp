@@ -22,6 +22,7 @@
 #include "palette.h"
 
 #include <QMetaEnum>
+#include <QStringList>
 
 #include "io/buffer.h"
 #include "io/file.h"
@@ -289,6 +290,8 @@ bool Palette::read(XmlReader& e, bool pasteMode)
 {
     m_name = e.attribute("name");
     m_type = Type::Unknown;
+    m_panelStates.clear();
+    m_panelStatesAssigned = false;
     while (e.readNextStartElement()) {
         const AsciiStringView tag(e.name());
         if (tag == "gridWidth") {
@@ -313,7 +316,25 @@ bool Palette::read(XmlReader& e, bool pasteMode)
         } else if (tag == "visible") {
             m_isVisible = e.readBool();
         } else if (tag == "panel") {
-            m_panel = e.readInt();
+            // written by an earlier version of the palette panels patch: single panel index
+            m_panelStates = { { e.readInt(), PanelState() } };
+            m_panelStatesAssigned = true;
+        } else if (tag == "panels") {
+            // "panel:order,panel:order,..."
+            m_panelStates.clear();
+            m_panelStatesAssigned = true;
+            const QString text = e.readText().toQString();
+            for (const QString& entry : text.split(u',', Qt::SkipEmptyParts)) {
+                const QStringList parts = entry.split(u':');
+                bool ok = false;
+                const int panel = parts.value(0).toInt(&ok);
+                if (!ok) {
+                    continue;
+                }
+                PanelState state;
+                state.order = parts.size() > 1 ? parts.at(1).toInt() : -1;
+                m_panelStates[panel] = state;
+            }
         } else if (pasteMode && tag == "expanded") {
             m_isExpanded = e.readBool();
         } else if (tag == "editable") {
@@ -352,6 +373,32 @@ bool Palette::read(XmlReader& e, bool pasteMode)
     return true;
 }
 
+Palette::PanelStates Palette::panelStates() const
+{
+    if (!m_panelStatesAssigned) {
+        PanelStates states;
+        if (m_isVisible) {
+            states[0] = PanelState { -1, m_isExpanded };
+        }
+        return states;
+    }
+    return m_panelStates;
+}
+
+void Palette::setPanelStates(const PanelStates& states)
+{
+    m_panelStates = states;
+    m_panelStatesAssigned = true;
+}
+
+bool Palette::isInPanel(int panel) const
+{
+    if (!m_panelStatesAssigned) {
+        return panel == 0 && m_isVisible;
+    }
+    return m_panelStates.find(panel) != m_panelStates.end();
+}
+
 QByteArray Palette::toMimeData() const
 {
     return ::toMimeData(this);
@@ -373,7 +420,13 @@ void Palette::write(XmlWriter& xml, bool pasteMode) const
     }
 
     xml.tag("visible", m_isVisible, true);
-    xml.tag("panel", m_panel, 0);
+    if (m_panelStatesAssigned) {
+        QStringList entries;
+        for (const auto& [panel, state] : m_panelStates) {
+            entries << QString("%1:%2").arg(panel).arg(state.order);
+        }
+        xml.tag("panels", String::fromQString(entries.join(u',')));
+    }
     xml.tag("editable", m_isEditable, true);
 
     if (pasteMode) {

@@ -312,18 +312,15 @@ bool UserPaletteController::insertNewItem(const QModelIndex& parent, int row, co
 
     if (newItemIsPalette) {
         if (auto panelModel = qobject_cast<PanelPaletteFilterProxyModel*>(model())) {
-            // Insert directly into the user palette tree, so that the new palette
-            // gets assigned to this panel before the panel filter evaluates it.
-            int srcRow = _userPalette->rowCount();
-            if (row >= 0 && row < panelModel->rowCount()) {
-                srcRow = panelModel->mapToSource(panelModel->index(row, 0)).row();
-            }
+            // Insert directly into the user palette tree, then show it in this panel only
+            const int srcRow = _userPalette->rowCount();
             if (!_userPalette->insertRow(srcRow)) {
                 return false;
             }
             const QModelIndex srcIndex = _userPalette->index(srcRow, 0);
-            _userPalette->setData(srcIndex, panelModel->panel(), PaletteTreeModel::PanelRole);
             _userPalette->setData(srcIndex, name, Qt::DisplayRole);
+            _userPalette->setPalettePanelStates(srcIndex, {});
+            panelModel->insertPalette(srcRow, row, true);
             return true;
         }
 
@@ -342,6 +339,12 @@ bool UserPaletteController::move(const QModelIndex& sourceParent, int sourceRow,
 {
     if (!canEdit(sourceParent) || !canEdit(destinationParent)) {
         return false;
+    }
+    if (!sourceParent.isValid() && !destinationParent.isValid()) {
+        if (auto panelModel = qobject_cast<PanelPaletteFilterProxyModel*>(model())) {
+            // palettes order is specific to each panel
+            return panelModel->movePalette(sourceRow, destinationChild);
+        }
     }
     if (sourceParent == destinationParent && (sourceParent.model() == model() || !sourceParent.isValid())) {
         const QModelIndex srcIndex = convertProxyIndex(model()->index(sourceRow, 0, sourceParent), _userPalette);
@@ -899,9 +902,19 @@ int PaletteProvider::draggedPaletteSourcePanel() const
     return m_draggedPalette.isValid() ? m_draggedPaletteSourcePanel : -1;
 }
 
+PanelPaletteFilterProxyModel* PaletteProvider::panelModel(int panel)
+{
+    return static_cast<PanelPaletteFilterProxyModel*>(panelPaletteModel(panel));
+}
+
 bool PaletteProvider::dropPaletteToPanel(int panel, int destRow)
 {
     if (!m_draggedPalette.isValid() || m_draggedPaletteSourcePanel == panel) {
+        return false;
+    }
+
+    // a palette appears at most once in a panel
+    if (m_userPaletteModel->isPaletteInPanel(m_draggedPalette, panel)) {
         return false;
     }
 
@@ -916,6 +929,7 @@ bool PaletteProvider::finishPaletteDrag()
 {
     const int panel = m_dropTargetPanel;
     const int destRow = m_dropTargetRow;
+    const int sourcePanel = m_draggedPaletteSourcePanel;
     const QPersistentModelIndex dragged = m_draggedPalette;
 
     m_draggedPalette = QPersistentModelIndex();
@@ -923,34 +937,16 @@ bool PaletteProvider::finishPaletteDrag()
     m_dropTargetPanel = -1;
     m_dropTargetRow = -1;
 
-    if (panel < 0 || !dragged.isValid()) {
+    if (panel < 0 || !dragged.isValid() || m_userPaletteModel->isPaletteInPanel(dragged, panel)) {
         return false;
     }
 
-    QAbstractItemModel* targetModel = panelPaletteModel(panel);
-    const int targetCount = targetModel->rowCount();
-    const int srcRow = dragged.row();
-    int finalRow = srcRow;
+    const bool expanded = m_userPaletteModel->palettePanelExpanded(dragged, sourcePanel);
 
-    // Palettes order only matters within a panel: place the dragged palette
-    // right before the palette at destRow in the target panel (or after its last one)
-    auto toUserRow = [this, targetModel](int row) {
-        return convertProxyIndex(targetModel->index(row, 0), m_userPaletteModel).row();
-    };
-
-    if (destRow >= 0 && destRow < targetCount) {
-        const int anchor = toUserRow(destRow);
-        finalRow = (srcRow < anchor) ? anchor - 1 : anchor;
-    } else if (targetCount > 0) {
-        const int last = toUserRow(targetCount - 1);
-        finalRow = (srcRow < last) ? last : last + 1;
-    }
-
-    if (finalRow != srcRow) {
-        m_userPaletteModel->moveRow(QModelIndex(), srcRow, QModelIndex(), finalRow);
-    }
-
-    m_userPaletteModel->setData(m_userPaletteModel->index(finalRow, 0), panel, PaletteTreeModel::PanelRole);
+    // move = add to the target panel, then remove from the source panel
+    // (other panels showing the same linked palette keep it)
+    panelModel(panel)->insertPalette(dragged.row(), destRow, expanded);
+    m_userPaletteModel->removePaletteFromPanel(dragged, sourcePanel);
     return true;
 }
 
@@ -961,8 +957,10 @@ bool PaletteProvider::addPaletteToPanel(const QPersistentModelIndex& index, int 
     }
 
     if (index.model() == m_userPaletteModel) {
-        m_userPaletteModel->setData(index, panel, PaletteTreeModel::PanelRole);
-        return addPalette(index);
+        // a hidden palette of the user palette tree: show it in this panel only, at the top
+        m_userPaletteModel->setPalettePanelStates(index, {});
+        panelModel(panel)->insertPalette(index.row(), 0, false);
+        return true;
     }
 
     if (index.model() == m_masterPaletteModel) {
@@ -970,11 +968,41 @@ bool PaletteProvider::addPaletteToPanel(const QPersistentModelIndex& index, int 
             return false;
         }
         // addPalette() inserts palettes from the master palette at the top of the user palette tree
-        m_userPaletteModel->setData(m_userPaletteModel->index(0, 0), panel, PaletteTreeModel::PanelRole);
+        const QModelIndex newIndex = m_userPaletteModel->index(0, 0);
+        m_userPaletteModel->setPalettePanelStates(newIndex, {});
+        panelModel(panel)->insertPalette(0, 0, false);
         return true;
     }
 
     return false;
+}
+
+QVariantList PaletteProvider::duplicateTargetPanels(const QModelIndex& panelModelIndex) const
+{
+    QVariantList panels;
+    const QModelIndex index = convertProxyIndex(panelModelIndex, m_userPaletteModel);
+    if (!index.isValid() || index.parent().isValid()) {
+        return panels;
+    }
+
+    for (int panel = 0; panel < PALETTE_PANELS_COUNT; ++panel) {
+        if (!m_userPaletteModel->isPaletteInPanel(index, panel)) {
+            panels << panel;
+        }
+    }
+    return panels;
+}
+
+bool PaletteProvider::duplicatePaletteToPanel(const QModelIndex& panelModelIndex, int panel)
+{
+    const QModelIndex index = convertProxyIndex(panelModelIndex, m_userPaletteModel);
+    if (!index.isValid() || index.parent().isValid() || m_userPaletteModel->isPaletteInPanel(index, panel)) {
+        return false;
+    }
+
+    // linked: the very same palette is shown in the other panel too, at its end
+    panelModel(panel)->insertPalette(index.row(), -1, false);
+    return true;
 }
 
 void PaletteProvider::resetPalette(const QModelIndex& index)
@@ -1021,7 +1049,7 @@ void PaletteProvider::doResetPalette(const QModelIndex& index)
     // restore visibility and expanded state of the palette after restoring its state
     const bool wasVisible = index.data(PaletteTreeModel::VisibleRole).toBool();
     const bool wasExpanded = index.data(PaletteTreeModel::PaletteExpandedRole).toBool();
-    const int panel = index.data(PaletteTreeModel::PanelRole).toInt();
+    const Palette::PanelStates panelStates = m_userPaletteModel->palettePanelStates(userPaletteIndex);
 
     if (!m_userPaletteModel->removeRow(row, parent)) {
         return;
@@ -1038,7 +1066,7 @@ void PaletteProvider::doResetPalette(const QModelIndex& index)
     const QModelIndex newIndex = m_userPaletteModel->index(row, column, parent);
     m_userPaletteModel->setData(newIndex, wasVisible, PaletteTreeModel::VisibleRole);
     m_userPaletteModel->setData(newIndex, wasExpanded, PaletteTreeModel::PaletteExpandedRole);
-    m_userPaletteModel->setData(newIndex, panel, PaletteTreeModel::PanelRole);
+    m_userPaletteModel->setPalettePanelStates(newIndex, panelStates);
 }
 
 QString PaletteProvider::getPaletteFilename(bool open, const QString& name) const

@@ -24,6 +24,8 @@
 
 #include <QMimeData>
 
+#include <algorithm>
+
 #include "internal/palettetree.h"
 #include "internal/palettecelliconengine.h"
 
@@ -67,7 +69,7 @@ void PaletteTreeModel::onDataChanged(const QModelIndex& topLeft, const QModelInd
 {
     Q_UNUSED(topLeft);
     Q_UNUSED(bottomRight);
-    static const std::set<int> nonPersistentRoles({ CellActiveRole, PaletteExpandedRole, Qt::DecorationRole });
+    static const std::set<int> nonPersistentRoles({ CellActiveRole, PaletteExpandedRole, PanelExpandedRole, Qt::DecorationRole });
 
     bool treeChanged = false;
     for (int role : roles) {
@@ -300,8 +302,6 @@ QVariant PaletteTreeModel::data(const QModelIndex& index, int role) const
             return QString("%1 palette").arg(pp->translatedName());
         case VisibleRole:
             return pp->isVisible();
-        case PanelRole:
-            return pp->panel();
         case CustomRole:
             return pp->isCustom();
         case EditableRole:
@@ -394,16 +394,6 @@ bool PaletteTreeModel::setData(const QModelIndex& index, const QVariant& value, 
                 if (val != pp->isVisible()) {
                     pp->setVisible(val);
                     emit dataChanged(index, index, { VisibleRole });
-                }
-                return true;
-            }
-            return false;
-        case PanelRole:
-            if (value.canConvert<int>()) {
-                const int val = value.toInt();
-                if (val != pp->panel()) {
-                    pp->setPanel(val);
-                    emit dataChanged(index, index, { PanelRole });
                 }
                 return true;
             }
@@ -564,7 +554,6 @@ QHash<int, QByteArray> PaletteTreeModel::roleNames() const
     roles[EditableRole] = "editable";
     roles[PaletteExpandedRole] = "expanded";
     roles[CellActiveRole] = "cellActive";
-    roles[PanelRole] = "panel";
     roles[Qt::AccessibleTextRole] = "accessibleText";
     return roles;
 }
@@ -1164,6 +1153,116 @@ bool PaletteCellFilterProxyModel::filterAcceptsRow(int sourceRow, const QModelIn
 }
 
 //---------------------------------------------------------
+//   Palette panels
+//---------------------------------------------------------
+
+Palette::PanelStates PaletteTreeModel::palettePanelStates(const QModelIndex& paletteIndex) const
+{
+    const Palette* palette = findPalette(paletteIndex);
+    return palette ? palette->panelStates() : Palette::PanelStates();
+}
+
+void PaletteTreeModel::setPalettePanelStates(const QModelIndex& paletteIndex, const Palette::PanelStates& states)
+{
+    Palette* palette = findPalette(paletteIndex);
+    if (!palette) {
+        return;
+    }
+
+    palette->setPanelStates(states);
+
+    const bool visible = !states.empty();
+    if (palette->isVisible() != visible) {
+        palette->setVisible(visible);
+        emit dataChanged(paletteIndex, paletteIndex, { VisibleRole, PanelsRole });
+    } else {
+        emit dataChanged(paletteIndex, paletteIndex, { PanelsRole });
+    }
+}
+
+bool PaletteTreeModel::isPaletteInPanel(const QModelIndex& paletteIndex, int panel) const
+{
+    const Palette* palette = findPalette(paletteIndex);
+    return palette && palette->isVisible() && palette->isInPanel(panel);
+}
+
+int PaletteTreeModel::palettePanelOrder(const QModelIndex& paletteIndex, int panel) const
+{
+    const Palette::PanelStates states = palettePanelStates(paletteIndex);
+    auto it = states.find(panel);
+    return it != states.end() ? it->second.order : -1;
+}
+
+bool PaletteTreeModel::palettePanelExpanded(const QModelIndex& paletteIndex, int panel) const
+{
+    const Palette::PanelStates states = palettePanelStates(paletteIndex);
+    auto it = states.find(panel);
+    return it != states.end() ? it->second.expanded : false;
+}
+
+void PaletteTreeModel::addPaletteToPanel(const QModelIndex& paletteIndex, int panel, bool expanded)
+{
+    const Palette* palette = findPalette(paletteIndex);
+    if (!palette) {
+        return;
+    }
+
+    // a hidden palette is in no panel: forget any stale panel assignment
+    Palette::PanelStates states = palette->isVisible() ? palette->panelStates() : Palette::PanelStates();
+    Palette::PanelState state;
+    state.expanded = expanded;
+    states[panel] = state;
+    setPalettePanelStates(paletteIndex, states);
+}
+
+void PaletteTreeModel::removePaletteFromPanel(const QModelIndex& paletteIndex, int panel)
+{
+    Palette::PanelStates states = palettePanelStates(paletteIndex);
+    if (states.erase(panel)) {
+        setPalettePanelStates(paletteIndex, states);
+    }
+}
+
+void PaletteTreeModel::setPalettePanelExpanded(const QModelIndex& paletteIndex, int panel, bool expanded)
+{
+    Palette* palette = findPalette(paletteIndex);
+    if (!palette) {
+        return;
+    }
+
+    Palette::PanelStates states = palette->panelStates();
+    auto it = states.find(panel);
+    if (it == states.end() || it->second.expanded == expanded) {
+        return;
+    }
+
+    it->second.expanded = expanded;
+    palette->setPanelStates(states);
+    emit dataChanged(paletteIndex, paletteIndex, { PanelExpandedRole });
+}
+
+void PaletteTreeModel::setPanelOrder(int panel, const std::vector<int>& rows)
+{
+    for (size_t i = 0; i < rows.size(); ++i) {
+        const QModelIndex paletteIndex = index(rows[i], 0);
+        Palette* palette = findPalette(paletteIndex);
+        if (!palette) {
+            continue;
+        }
+
+        Palette::PanelStates states = palette->panelStates();
+        auto it = states.find(panel);
+        if (it == states.end() || it->second.order == int(i)) {
+            continue;
+        }
+
+        it->second.order = int(i);
+        palette->setPanelStates(states);
+        emit dataChanged(paletteIndex, paletteIndex, { PanelsRole });
+    }
+}
+
+//---------------------------------------------------------
 //   PanelPaletteFilterProxyModel
 //---------------------------------------------------------
 
@@ -1172,6 +1271,49 @@ PanelPaletteFilterProxyModel::PanelPaletteFilterProxyModel(int panel, QObject* p
 {
     setFilterRole(PaletteTreeModel::VisibleRole);
     setFilterFixedString("true");
+}
+
+void PanelPaletteFilterProxyModel::setSourceModel(QAbstractItemModel* model)
+{
+    if (sourceModel()) {
+        disconnect(sourceModel(), &QAbstractItemModel::dataChanged, this, &PanelPaletteFilterProxyModel::onSourceDataChanged);
+    }
+
+    QSortFilterProxyModel::setSourceModel(model);
+
+    if (model) {
+        connect(model, &QAbstractItemModel::dataChanged, this, &PanelPaletteFilterProxyModel::onSourceDataChanged);
+    }
+
+    sort(0);
+}
+
+PaletteTreeModel* PanelPaletteFilterProxyModel::treeModel() const
+{
+    return qobject_cast<PaletteTreeModel*>(sourceModel());
+}
+
+void PanelPaletteFilterProxyModel::onSourceDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight,
+                                                       const QList<int>& roles)
+{
+    Q_UNUSED(bottomRight);
+
+    if (topLeft.parent().isValid()) {
+        return;
+    }
+
+    if (roles.contains(PaletteTreeModel::PanelsRole)) {
+        // membership or order in this panel may have changed
+        invalidate();
+        return;
+    }
+
+    if (roles.contains(PaletteTreeModel::PanelExpandedRole)) {
+        const QModelIndex proxyIndex = mapFromSource(topLeft);
+        if (proxyIndex.isValid()) {
+            emit dataChanged(proxyIndex, proxyIndex, { PaletteTreeModel::PaletteExpandedRole });
+        }
+    }
 }
 
 bool PanelPaletteFilterProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const
@@ -1184,6 +1326,102 @@ bool PanelPaletteFilterProxyModel::filterAcceptsRow(int sourceRow, const QModelI
         return true; // palette cell: visibility is enough
     }
 
-    const QModelIndex paletteIndex = sourceModel()->index(sourceRow, 0, sourceParent);
-    return sourceModel()->data(paletteIndex, PaletteTreeModel::PanelRole).toInt() == m_panel;
+    const PaletteTreeModel* tree = treeModel();
+    return tree && tree->isPaletteInPanel(sourceModel()->index(sourceRow, 0, sourceParent), m_panel);
+}
+
+bool PanelPaletteFilterProxyModel::lessThan(const QModelIndex& left, const QModelIndex& right) const
+{
+    const PaletteTreeModel* tree = treeModel();
+    if (!tree || left.parent().isValid() || right.parent().isValid()) {
+        return left.row() < right.row(); // keep cells in their original order
+    }
+
+    const int leftOrder = tree->palettePanelOrder(left, m_panel);
+    const int rightOrder = tree->palettePanelOrder(right, m_panel);
+    if (leftOrder != rightOrder) {
+        return leftOrder < rightOrder;
+    }
+    return left.row() < right.row();
+}
+
+QVariant PanelPaletteFilterProxyModel::data(const QModelIndex& index, int role) const
+{
+    if (role == PaletteTreeModel::PaletteExpandedRole && index.isValid() && !index.parent().isValid()) {
+        const PaletteTreeModel* tree = treeModel();
+        return tree ? tree->palettePanelExpanded(mapToSource(index), m_panel) : false;
+    }
+    return QSortFilterProxyModel::data(index, role);
+}
+
+bool PanelPaletteFilterProxyModel::setData(const QModelIndex& index, const QVariant& value, int role)
+{
+    PaletteTreeModel* tree = treeModel();
+    if (!tree || !index.isValid() || index.parent().isValid()) {
+        return QSortFilterProxyModel::setData(index, value, role);
+    }
+
+    const QModelIndex srcIndex = mapToSource(index);
+
+    if (role == PaletteTreeModel::PaletteExpandedRole) {
+        tree->setPalettePanelExpanded(srcIndex, m_panel, value.toBool());
+        return true;
+    }
+
+    if (role == PaletteTreeModel::VisibleRole) {
+        // hiding a palette only removes it from this panel
+        if (!value.toBool()) {
+            tree->removePaletteFromPanel(srcIndex, m_panel);
+        }
+        return true;
+    }
+
+    return QSortFilterProxyModel::setData(index, value, role);
+}
+
+std::vector<int> PanelPaletteFilterProxyModel::sourceRowsInOrder() const
+{
+    std::vector<int> rows;
+    for (int i = 0; i < rowCount(); ++i) {
+        rows.push_back(mapToSource(this->index(i, 0)).row());
+    }
+    return rows;
+}
+
+bool PanelPaletteFilterProxyModel::movePalette(int srcRow, int destRow)
+{
+    PaletteTreeModel* tree = treeModel();
+    std::vector<int> rows = sourceRowsInOrder();
+    if (!tree || srcRow < 0 || srcRow >= int(rows.size())) {
+        return false;
+    }
+
+    destRow = std::clamp(destRow, 0, int(rows.size()) - 1);
+    if (srcRow == destRow) {
+        return false;
+    }
+
+    const int moved = rows[srcRow];
+    rows.erase(rows.begin() + srcRow);
+    rows.insert(rows.begin() + destRow, moved);
+    tree->setPanelOrder(m_panel, rows);
+    return true;
+}
+
+void PanelPaletteFilterProxyModel::insertPalette(int sourcePaletteRow, int destRow, bool expanded)
+{
+    PaletteTreeModel* tree = treeModel();
+    if (!tree) {
+        return;
+    }
+
+    std::vector<int> rows = sourceRowsInOrder();
+    rows.erase(std::remove(rows.begin(), rows.end(), sourcePaletteRow), rows.end());
+    if (destRow < 0 || destRow > int(rows.size())) {
+        destRow = int(rows.size());
+    }
+    rows.insert(rows.begin() + destRow, sourcePaletteRow);
+
+    tree->addPaletteToPanel(tree->index(sourcePaletteRow, 0), m_panel, expanded);
+    tree->setPanelOrder(m_panel, rows);
 }

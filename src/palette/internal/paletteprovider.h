@@ -264,6 +264,12 @@ public:
     Q_INVOKABLE bool dropPaletteToPanel(int panel, int destRow);
     Q_INVOKABLE bool finishPaletteDrag();
 
+    // Linked duplicates: show the same palette in another panel
+    Q_INVOKABLE QVariantList duplicateTargetPanels(const QModelIndex& panelModelIndex) const;
+    Q_INVOKABLE bool duplicatePaletteToPanel(const QModelIndex& panelModelIndex, int panel);
+
+    static constexpr int PALETTE_PANELS_COUNT = 8;
+
     Q_INVOKABLE void resetPalette(const QModelIndex&);
 
     Q_INVOKABLE bool savePalette(const QModelIndex&);
@@ -342,6 +348,8 @@ private:
     std::map<int, PanelPaletteFilterProxyModel*> m_panelModels;
     std::map<int, UserPaletteController*> m_panelControllers;
     UserPaletteController* m_searchController = nullptr;
+
+    PanelPaletteFilterProxyModel* panelModel(int panel);
 
     QPersistentModelIndex m_draggedPalette;
     int m_draggedPaletteSourcePanel = -1;

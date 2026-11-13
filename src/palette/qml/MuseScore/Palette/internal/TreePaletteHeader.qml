@@ -45,6 +45,22 @@ Item {
     property NavigationPanel navigationPanel: null
     property int navigationRow: 0
 
+    //! "Duplicate to…" submenu: the palette panels this palette is not shown in yet.
+    //! Depends on `hovered` so that it is refreshed every time the header is hovered.
+    function duplicateMenuItems(refresh) {
+        if (!root.paletteProvider || !root.modelIndex) {
+            return [];
+        }
+
+        const panels = root.paletteProvider.duplicateTargetPanels(root.modelIndex);
+        const items = [];
+        for (let i = 0; i < panels.length; ++i) {
+            const panel = panels[i];
+            items.push({ id: "duplicate:" + panel, title: panel === 0 ? qsTrc("palette", "Palettes") : "Palettes " + (panel + 1) });
+        }
+        return items;
+    }
+
     function closeContextMenu() {
         if (!menuButton.isMenuOpened) {
             return
@@ -163,9 +179,12 @@ Item {
         navigation.row: root.navigationRow
         navigation.column: 3
 
+        readonly property var duplicateItems: root.duplicateMenuItems(root.hovered)
+
         menuModel: [
             {id: "hide", title: root.custom ? qsTrc("palette", "Hide/Delete palette") : qsTrc("palette", "Hide palette") },
             {id: "new", title: qsTrc("palette", "Insert new palette") },
+            {id: "duplicate", title: "Duplicate to…", subitems: duplicateItems, enabled: duplicateItems.length > 0 },
             {id: "", title: "" }, // separator
             {id: "edit", title: qsTrc("palette", "Enable editing"), checkable: true, checked: root.editingEnabled },
             {id: "", title: "" }, // separator
@@ -181,6 +200,11 @@ Item {
         }
 
         function menuItemClicked(itemId) {
+            if (itemId.startsWith("duplicate:")) {
+                root.paletteProvider.duplicatePaletteToPanel(root.modelIndex, parseInt(itemId.substring("duplicate:".length)));
+                return;
+            }
+
             switch(itemId) {
             case "hide": root.hidePaletteRequested(); break
             case "new": root.insertNewPaletteRequested(); break
