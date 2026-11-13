@@ -56,7 +56,13 @@ Item {
         const items = [];
         for (let i = 0; i < panels.length; ++i) {
             const panel = panels[i];
-            items.push({ id: "duplicate:" + panel, title: panel === 0 ? qsTrc("palette", "Palettes") : "Palettes " + (panel + 1) });
+            let title = "Palettes " + (panel + 1);
+            if (panel === 0) {
+                title = qsTrc("palette", "Palettes");
+            } else if (panel >= 8) {
+                title = "Top palettes " + (panel - 7); // horizontal panels
+            }
+            items.push({ id: "duplicate:" + panel, title: title });
         }
         return items;
     }

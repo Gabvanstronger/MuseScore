@@ -417,7 +417,10 @@ void DockWindow::loadPanels(const DockPageView* page)
 
         const Location location = panel->location();
         const bool isSideLocation = location == Location::Left || location == Location::Right;
-        addDock(panel, location, isSideLocation ? page->centralDock() : nullptr);
+        //! NOTE: panels placed at the top (e.g. the top palette panels) are docked right above
+        //! the central dock, i.e. between the side panels, not across the whole window
+        const bool isTopLocation = location == Location::Top;
+        addDock(panel, location, (isSideLocation || isTopLocation) ? page->centralDock() : nullptr);
     }
 
     for (Location location : POSSIBLE_LOCATIONS) {

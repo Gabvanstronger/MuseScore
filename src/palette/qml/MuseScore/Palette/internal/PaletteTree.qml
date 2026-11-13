@@ -35,11 +35,12 @@ StyledListView {
 
     property PaletteProvider paletteProvider
     property int panelIndex: 0 // which palette panel this tree belongs to
+    property int columnIndex: -1 // column of a horizontal palette panel (-1 for vertical panels)
     property AbstractItemModel paletteModel: Boolean(paletteProvider)
-                                             ? (searchOpened ? paletteProvider.searchPaletteModel() : paletteProvider.panelPaletteModel(panelIndex))
+                                             ? (searchOpened ? paletteProvider.searchPaletteModel() : paletteProvider.panelPaletteModel(panelIndex, columnIndex))
                                              : null
     property PaletteController paletteController: Boolean(paletteProvider)
-                                                  ? (searchOpened ? paletteProvider.searchPaletteController() : paletteProvider.panelPaletteController(panelIndex))
+                                                  ? (searchOpened ? paletteProvider.searchPaletteController() : paletteProvider.panelPaletteController(panelIndex, columnIndex))
                                                   : null
 
     property alias navigation: keynavTree
@@ -175,8 +176,11 @@ StyledListView {
         if (!paletteProvider) {
             return false;
         }
-        const sourcePanel = paletteProvider.draggedPaletteSourcePanel();
-        return sourcePanel >= 0 && sourcePanel !== panelIndex;
+        if (!paletteProvider.isPaletteDragActive()) {
+            return false;
+        }
+        return paletteProvider.draggedPaletteSourcePanel() !== panelIndex
+                || paletteProvider.draggedPaletteSourceColumn() !== columnIndex;
     }
 
     function foreignDragEntered() {
@@ -203,7 +207,7 @@ StyledListView {
     function dropForeignPalette(destRow) {
         placeholder.removePlaceholder();
         foreignDragHoverCount = 0;
-        return paletteProvider.dropPaletteToPanel(panelIndex, destRow);
+        return paletteProvider.dropPaletteToPanel(panelIndex, destRow, columnIndex, -1);
     }
 
     function placeholderData() {
@@ -617,7 +621,7 @@ StyledListView {
                 paletteHeader.closeContextMenu()
 
                 paletteTree.itemDragged = true;
-                paletteTree.paletteProvider.startPaletteDrag(control.modelIndex, paletteTree.panelIndex);
+                paletteTree.paletteProvider.startPaletteDrag(control.modelIndex, paletteTree.panelIndex, paletteTree.columnIndex);
                 DelegateModel.inPersistedItems = true;
                 DelegateModel.inItems = false;
                 placeholder.makePlaceholder(control.rowIndex, paletteTree.placeholderData());

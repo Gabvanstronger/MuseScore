@@ -165,8 +165,9 @@ public:
     //! A palette can be shown (linked) in several panels; each panel keeps
     //! its own order and expanded state.
     struct PanelState {
-        int order = -1;
+        int order = -1;        // position in the panel (in its column, for horizontal panels)
         bool expanded = false;
+        int column = 0;        // column index, used by horizontal palette panels only
     };
     using PanelStates = std::map<int, PanelState>;
 

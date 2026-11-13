@@ -194,7 +194,12 @@ public:
     bool isPaletteInPanel(const QModelIndex& paletteIndex, int panel) const;
     int palettePanelOrder(const QModelIndex& paletteIndex, int panel) const;
     bool palettePanelExpanded(const QModelIndex& paletteIndex, int panel) const;
-    void addPaletteToPanel(const QModelIndex& paletteIndex, int panel, bool expanded);
+    void addPaletteToPanel(const QModelIndex& paletteIndex, int panel, bool expanded, int column = 0);
+    int palettePanelColumn(const QModelIndex& paletteIndex, int panel) const;
+    //! Horizontal palette panels: number of columns, inserting an empty column, removing gaps
+    int panelColumnCount(int panel) const;
+    void insertPanelColumn(int panel, int column);
+    void normalizePanelColumns(int panel);
     void removePaletteFromPanel(const QModelIndex& paletteIndex, int panel);
     void setPalettePanelExpanded(const QModelIndex& paletteIndex, int panel, bool expanded);
     //! Sets the order of palettes in a panel to the given order of (top-level) rows
@@ -262,9 +267,11 @@ class PanelPaletteFilterProxyModel : public QSortFilterProxyModel
 {
     Q_OBJECT
 public:
-    PanelPaletteFilterProxyModel(int panel, QObject* parent = nullptr);
+    //! column = -1: all the palettes of the panel; otherwise only those in that column (horizontal panels)
+    PanelPaletteFilterProxyModel(int panel, int column, QObject* parent = nullptr);
 
     int panel() const { return m_panel; }
+    int column() const { return m_column; }
 
     void setSourceModel(QAbstractItemModel* sourceModel) override;
 
@@ -289,6 +296,7 @@ private:
     void onSourceDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QList<int>& roles);
 
     int m_panel = 0;
+    int m_column = -1;
 };
 }
 

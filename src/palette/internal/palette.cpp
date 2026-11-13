@@ -320,7 +320,7 @@ bool Palette::read(XmlReader& e, bool pasteMode)
             m_panelStates = { { e.readInt(), PanelState() } };
             m_panelStatesAssigned = true;
         } else if (tag == "panels") {
-            // "panel:order,panel:order,..."
+            // "panel:order:column,panel:order:column,..."
             m_panelStates.clear();
             m_panelStatesAssigned = true;
             const QString text = e.readText().toQString();
@@ -333,6 +333,7 @@ bool Palette::read(XmlReader& e, bool pasteMode)
                 }
                 PanelState state;
                 state.order = parts.size() > 1 ? parts.at(1).toInt() : -1;
+                state.column = parts.size() > 2 ? parts.at(2).toInt() : 0;
                 m_panelStates[panel] = state;
             }
         } else if (pasteMode && tag == "expanded") {
@@ -378,7 +379,7 @@ Palette::PanelStates Palette::panelStates() const
     if (!m_panelStatesAssigned) {
         PanelStates states;
         if (m_isVisible) {
-            states[0] = PanelState { -1, m_isExpanded };
+            states[0] = PanelState { -1, m_isExpanded, 0 };
         }
         return states;
     }
@@ -423,7 +424,7 @@ void Palette::write(XmlWriter& xml, bool pasteMode) const
     if (m_panelStatesAssigned) {
         QStringList entries;
         for (const auto& [panel, state] : m_panelStates) {
-            entries << QString("%1:%2").arg(panel).arg(state.order);
+            entries << QString("%1:%2:%3").arg(panel).arg(state.order).arg(state.column);
         }
         xml.tag("panels", String::fromQString(entries.join(u',')));
     }

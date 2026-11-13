@@ -251,24 +251,33 @@ public:
     Q_INVOKABLE QAbstractItemModel* availableExtraPalettesModel() const;
     Q_INVOKABLE bool addPalette(const QPersistentModelIndex&);
 
-    // Multiple palette panels: each panel shows the visible palettes assigned to it
-    Q_INVOKABLE QAbstractItemModel* panelPaletteModel(int panel);
-    Q_INVOKABLE mu::palette::AbstractPaletteController* panelPaletteController(int panel);
+    // Multiple palette panels: each panel shows the visible palettes assigned to it.
+    // Panels 0..7 are vertical; panels 8..10 are horizontal and show their palettes in columns
+    // (column = -1: all the palettes of the panel).
+    Q_INVOKABLE QAbstractItemModel* panelPaletteModel(int panel, int column = -1);
+    Q_INVOKABLE mu::palette::AbstractPaletteController* panelPaletteController(int panel, int column = -1);
     Q_INVOKABLE QAbstractItemModel* searchPaletteModel();
     Q_INVOKABLE mu::palette::AbstractPaletteController* searchPaletteController();
     Q_INVOKABLE bool addPaletteToPanel(const QPersistentModelIndex& index, int panel);
+    Q_INVOKABLE int panelColumnCount(int panel) const;
+    Q_INVOKABLE bool createCustomPaletteInPanel(int panel, const QString& name);
 
-    // Dragging palettes between palette panels
-    Q_INVOKABLE void startPaletteDrag(const QModelIndex& panelModelIndex, int panel);
+    // Dragging palettes between palette panels (and columns of horizontal panels)
+    Q_INVOKABLE void startPaletteDrag(const QModelIndex& panelModelIndex, int panel, int column = -1);
     Q_INVOKABLE int draggedPaletteSourcePanel() const;
-    Q_INVOKABLE bool dropPaletteToPanel(int panel, int destRow);
+    Q_INVOKABLE int draggedPaletteSourceColumn() const;
+    Q_INVOKABLE bool isPaletteDragActive() const;
+    //! column: target column (-1 for vertical panels); newColumnAt >= 0: create a new column there
+    Q_INVOKABLE bool dropPaletteToPanel(int panel, int destRow, int column = -1, int newColumnAt = -1);
     Q_INVOKABLE bool finishPaletteDrag();
 
     // Linked duplicates: show the same palette in another panel
     Q_INVOKABLE QVariantList duplicateTargetPanels(const QModelIndex& panelModelIndex) const;
     Q_INVOKABLE bool duplicatePaletteToPanel(const QModelIndex& panelModelIndex, int panel);
 
-    static constexpr int PALETTE_PANELS_COUNT = 8;
+    static constexpr int FIRST_HORIZONTAL_PALETTE_PANEL = 8;
+    static constexpr int PALETTE_PANELS_COUNT = 11;
+    static bool isHorizontalPalettePanel(int panel) { return panel >= FIRST_HORIZONTAL_PALETTE_PANEL; }
 
     Q_INVOKABLE void resetPalette(const QModelIndex&);
 
@@ -297,6 +306,7 @@ public:
 
 signals:
     void userPaletteChanged();
+    void panelColumnsChanged();
     void mainPaletteChanged();
 
     void isSinglePaletteChanged();
@@ -349,12 +359,18 @@ private:
     std::map<int, UserPaletteController*> m_panelControllers;
     UserPaletteController* m_searchController = nullptr;
 
-    PanelPaletteFilterProxyModel* panelModel(int panel);
+    PanelPaletteFilterProxyModel* panelModel(int panel, int column = -1);
+    void connectPanelSignals();
+    void normalizeHorizontalPanels();
+    bool m_panelSignalsConnected = false;
 
     QPersistentModelIndex m_draggedPalette;
     int m_draggedPaletteSourcePanel = -1;
+    int m_draggedPaletteSourceColumn = -1;
     int m_dropTargetPanel = -1;
     int m_dropTargetRow = -1;
+    int m_dropTargetColumn = -1;
+    int m_dropNewColumnAt = -1;
 
     muse::async::Channel<engraving::ElementPtr> m_addCustomItemRequested;
 };

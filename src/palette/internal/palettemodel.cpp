@@ -25,6 +25,8 @@
 #include <QMimeData>
 
 #include <algorithm>
+#include <map>
+#include <set>
 
 #include "internal/palettetree.h"
 #include "internal/palettecelliconengine.h"
@@ -1200,7 +1202,7 @@ bool PaletteTreeModel::palettePanelExpanded(const QModelIndex& paletteIndex, int
     return it != states.end() ? it->second.expanded : false;
 }
 
-void PaletteTreeModel::addPaletteToPanel(const QModelIndex& paletteIndex, int panel, bool expanded)
+void PaletteTreeModel::addPaletteToPanel(const QModelIndex& paletteIndex, int panel, bool expanded, int column)
 {
     const Palette* palette = findPalette(paletteIndex);
     if (!palette) {
@@ -1211,8 +1213,84 @@ void PaletteTreeModel::addPaletteToPanel(const QModelIndex& paletteIndex, int pa
     Palette::PanelStates states = palette->isVisible() ? palette->panelStates() : Palette::PanelStates();
     Palette::PanelState state;
     state.expanded = expanded;
+    state.column = column;
     states[panel] = state;
     setPalettePanelStates(paletteIndex, states);
+}
+
+int PaletteTreeModel::palettePanelColumn(const QModelIndex& paletteIndex, int panel) const
+{
+    const Palette::PanelStates states = palettePanelStates(paletteIndex);
+    auto it = states.find(panel);
+    return it != states.end() ? it->second.column : 0;
+}
+
+int PaletteTreeModel::panelColumnCount(int panel) const
+{
+    int count = 0;
+    for (int row = 0; row < rowCount(); ++row) {
+        const QModelIndex paletteIndex = index(row, 0);
+        if (isPaletteInPanel(paletteIndex, panel)) {
+            count = std::max(count, palettePanelColumn(paletteIndex, panel) + 1);
+        }
+    }
+    return count;
+}
+
+void PaletteTreeModel::insertPanelColumn(int panel, int column)
+{
+    for (int row = 0; row < rowCount(); ++row) {
+        const QModelIndex paletteIndex = index(row, 0);
+        Palette* palette = findPalette(paletteIndex);
+        if (!palette || !isPaletteInPanel(paletteIndex, panel)) {
+            continue;
+        }
+
+        Palette::PanelStates states = palette->panelStates();
+        auto it = states.find(panel);
+        if (it == states.end() || it->second.column < column) {
+            continue;
+        }
+
+        it->second.column++;
+        palette->setPanelStates(states);
+        emit dataChanged(paletteIndex, paletteIndex, { PanelsRole });
+    }
+}
+
+void PaletteTreeModel::normalizePanelColumns(int panel)
+{
+    std::set<int> columns;
+    for (int row = 0; row < rowCount(); ++row) {
+        const QModelIndex paletteIndex = index(row, 0);
+        if (isPaletteInPanel(paletteIndex, panel)) {
+            columns.insert(palettePanelColumn(paletteIndex, panel));
+        }
+    }
+
+    std::map<int, int> newColumns;
+    int next = 0;
+    for (int column : columns) {
+        newColumns[column] = next++;
+    }
+
+    for (int row = 0; row < rowCount(); ++row) {
+        const QModelIndex paletteIndex = index(row, 0);
+        Palette* palette = findPalette(paletteIndex);
+        if (!palette || !isPaletteInPanel(paletteIndex, panel)) {
+            continue;
+        }
+
+        Palette::PanelStates states = palette->panelStates();
+        auto it = states.find(panel);
+        if (it == states.end() || newColumns[it->second.column] == it->second.column) {
+            continue;
+        }
+
+        it->second.column = newColumns[it->second.column];
+        palette->setPanelStates(states);
+        emit dataChanged(paletteIndex, paletteIndex, { PanelsRole });
+    }
 }
 
 void PaletteTreeModel::removePaletteFromPanel(const QModelIndex& paletteIndex, int panel)
@@ -1220,6 +1298,7 @@ void PaletteTreeModel::removePaletteFromPanel(const QModelIndex& paletteIndex, i
     Palette::PanelStates states = palettePanelStates(paletteIndex);
     if (states.erase(panel)) {
         setPalettePanelStates(paletteIndex, states);
+        normalizePanelColumns(panel); // a column of a horizontal panel may have become empty
     }
 }
 
@@ -1266,8 +1345,8 @@ void PaletteTreeModel::setPanelOrder(int panel, const std::vector<int>& rows)
 //   PanelPaletteFilterProxyModel
 //---------------------------------------------------------
 
-PanelPaletteFilterProxyModel::PanelPaletteFilterProxyModel(int panel, QObject* parent)
-    : QSortFilterProxyModel(parent), m_panel(panel)
+PanelPaletteFilterProxyModel::PanelPaletteFilterProxyModel(int panel, int column, QObject* parent)
+    : QSortFilterProxyModel(parent), m_panel(panel), m_column(column)
 {
     setFilterRole(PaletteTreeModel::VisibleRole);
     setFilterFixedString("true");
@@ -1327,7 +1406,11 @@ bool PanelPaletteFilterProxyModel::filterAcceptsRow(int sourceRow, const QModelI
     }
 
     const PaletteTreeModel* tree = treeModel();
-    return tree && tree->isPaletteInPanel(sourceModel()->index(sourceRow, 0, sourceParent), m_panel);
+    const QModelIndex paletteIndex = sourceModel()->index(sourceRow, 0, sourceParent);
+    if (!tree || !tree->isPaletteInPanel(paletteIndex, m_panel)) {
+        return false;
+    }
+    return m_column < 0 || tree->palettePanelColumn(paletteIndex, m_panel) == m_column;
 }
 
 bool PanelPaletteFilterProxyModel::lessThan(const QModelIndex& left, const QModelIndex& right) const
@@ -1335,6 +1418,12 @@ bool PanelPaletteFilterProxyModel::lessThan(const QModelIndex& left, const QMode
     const PaletteTreeModel* tree = treeModel();
     if (!tree || left.parent().isValid() || right.parent().isValid()) {
         return left.row() < right.row(); // keep cells in their original order
+    }
+
+    const int leftColumn = tree->palettePanelColumn(left, m_panel);
+    const int rightColumn = tree->palettePanelColumn(right, m_panel);
+    if (leftColumn != rightColumn) {
+        return leftColumn < rightColumn;
     }
 
     const int leftOrder = tree->palettePanelOrder(left, m_panel);
@@ -1422,6 +1511,6 @@ void PanelPaletteFilterProxyModel::insertPalette(int sourcePaletteRow, int destR
     }
     rows.insert(rows.begin() + destRow, sourcePaletteRow);
 
-    tree->addPaletteToPanel(tree->index(sourcePaletteRow, 0), m_panel, expanded);
+    tree->addPaletteToPanel(tree->index(sourcePaletteRow, 0), m_panel, expanded, std::max(m_column, 0));
     tree->setPanelOrder(m_panel, rows);
 }

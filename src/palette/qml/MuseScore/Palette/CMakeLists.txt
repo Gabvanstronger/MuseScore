@@ -38,6 +38,7 @@ qt_add_qml_module(palette_qml
         internal/palettecellpropertiesmodel.cpp
     QML_FILES
         DrumsetPanel.qml
+        HorizontalPalettesPanel.qml
         internal/AddPalettesPopup.qml
         internal/CreateCustomPalettePopup.qml
         internal/MoreElementsPopup.qml

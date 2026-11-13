@@ -31,6 +31,7 @@ Item {
 
     property PaletteProvider paletteProvider: null
     property int panelIndex: 0
+    property bool searchEnabled: true
 
     property bool isSearchOpened: false
     readonly property bool isSearchFieldFocused: searchField.activeFocus
@@ -163,7 +164,7 @@ Item {
         toolTipTitle: qsTrc("palette", "Search palettes")
 
         icon: IconCode.SEARCH
-        visible: !root.isSearchOpened
+        visible: !root.isSearchOpened && root.searchEnabled
         enabled: visible
 
         onClicked: {

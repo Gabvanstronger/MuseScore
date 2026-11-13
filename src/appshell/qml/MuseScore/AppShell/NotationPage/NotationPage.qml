@@ -631,6 +631,117 @@ DockPage {
         // =============================================
 
         DockPanel {
+            id: topPalettesPanel1
+
+            objectName: "topPalettesPanel1"
+            title: "Top palettes 1"
+
+            height: 300
+            minimumHeight: root.horizontalPanelMinHeight
+            maximumHeight: root.panelMaxDimension
+
+            minimumWidth: root.panelMinDimension
+            maximumWidth: root.panelMaxDimension
+
+            groupName: root.horizontalPanelsGroup
+
+            //! NOTE: hidden by default, open from View > More palette panels
+            visible: false
+
+            //! NOTE: docked above the score, between the side panels
+            location: Location.Top
+
+            dropDestinations: root.horizontalPanelDropDestinations
+
+            navigationSection: root.navigationPanelSec(topPalettesPanel1.location)
+
+            HorizontalPalettesPanel {
+                panelIndex: 8
+
+                navigationSection: topPalettesPanel1.navigationSection
+                navigationOrderStart: topPalettesPanel1.contentNavigationPanelOrderStart
+
+                Component.onCompleted: {
+                    topPalettesPanel1.contextMenuModel = contextMenuModel
+                }
+            }
+        },
+
+        DockPanel {
+            id: topPalettesPanel2
+
+            objectName: "topPalettesPanel2"
+            title: "Top palettes 2"
+
+            height: 300
+            minimumHeight: root.horizontalPanelMinHeight
+            maximumHeight: root.panelMaxDimension
+
+            minimumWidth: root.panelMinDimension
+            maximumWidth: root.panelMaxDimension
+
+            groupName: root.horizontalPanelsGroup
+
+            //! NOTE: hidden by default, open from View > More palette panels
+            visible: false
+
+            //! NOTE: docked above the score, between the side panels
+            location: Location.Top
+
+            dropDestinations: root.horizontalPanelDropDestinations
+
+            navigationSection: root.navigationPanelSec(topPalettesPanel2.location)
+
+            HorizontalPalettesPanel {
+                panelIndex: 9
+
+                navigationSection: topPalettesPanel2.navigationSection
+                navigationOrderStart: topPalettesPanel2.contentNavigationPanelOrderStart
+
+                Component.onCompleted: {
+                    topPalettesPanel2.contextMenuModel = contextMenuModel
+                }
+            }
+        },
+
+        DockPanel {
+            id: topPalettesPanel3
+
+            objectName: "topPalettesPanel3"
+            title: "Top palettes 3"
+
+            height: 300
+            minimumHeight: root.horizontalPanelMinHeight
+            maximumHeight: root.panelMaxDimension
+
+            minimumWidth: root.panelMinDimension
+            maximumWidth: root.panelMaxDimension
+
+            groupName: root.horizontalPanelsGroup
+
+            //! NOTE: hidden by default, open from View > More palette panels
+            visible: false
+
+            //! NOTE: docked above the score, between the side panels
+            location: Location.Top
+
+            dropDestinations: root.horizontalPanelDropDestinations
+
+            navigationSection: root.navigationPanelSec(topPalettesPanel3.location)
+
+            HorizontalPalettesPanel {
+                panelIndex: 10
+
+                navigationSection: topPalettesPanel3.navigationSection
+                navigationOrderStart: topPalettesPanel3.contentNavigationPanelOrderStart
+
+                Component.onCompleted: {
+                    topPalettesPanel3.contextMenuModel = contextMenuModel
+                }
+            }
+        },
+
+        DockPanel {
             id: mixerPanel
 
             objectName: root.pageModel.mixerPanelName()
