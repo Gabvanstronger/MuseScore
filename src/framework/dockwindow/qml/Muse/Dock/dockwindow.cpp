@@ -542,6 +542,18 @@ void DockWindow::handleUnknownDock(const DockPageView* page, DockBase* unknownDo
         return;
     }
 
+    LOGI() << "[palette-panels] unknown panel: " << unknownPanel->objectName();
+
+    //! NOTE: panels placed at the top (e.g. the top palette panels) are docked right above
+    //! the central dock, like in loadPanels(), instead of going through the top holder
+    if (unknownPanel->location() == Location::Top) {
+        addDock(unknownPanel, Location::Top, page->centralDock());
+        if (!unknownPanel->isVisible()) {
+            unknownPanel->close();
+        }
+        return;
+    }
+
     DockingHolderView* holder = page->holder(DockType::Panel, unknownPanel->location());
     IF_ASSERT_FAILED(holder) {
         addDock(unknownDock, unknownDock->location(), page->centralDock());
@@ -553,6 +565,14 @@ void DockWindow::handleUnknownDock(const DockPageView* page, DockBase* unknownDo
     holder->open(); // init the frame...
 
     KDDockWidgets::Frame* frame = holder->dockWidget()->frame();
+    if (!frame) {
+        holder->close();
+        addDock(unknownDock, unknownDock->location(), page->centralDock());
+        if (!unknownPanel->isVisible()) {
+            unknownPanel->close();
+        }
+        return;
+    }
     frame->addWidget(unknownPanel->dockWidget());
 
     holder->close();
